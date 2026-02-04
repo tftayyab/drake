@@ -4,9 +4,9 @@ Minimalist mobile-only demo for Shopify. Drake-inspired layout and animations.
 
 ## How to run
 
-- Open `index.html` in a browser, or
-- Serve the project root (so that `Images/` is available):  
-  `npx serve ..` from inside `demo`, or open `index.html` from `c:\Tayyab\Drake-Itel\demo`.
+- Open `index.html` in the project root in a browser, or
+- From the project root: `npx serve .` — then open the URL shown (e.g. http://localhost:3000).  
+  `index.html` and `Images/` are at the root of the project.
 
 ## Features
 
