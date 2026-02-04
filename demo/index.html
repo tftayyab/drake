@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>itel – Explore</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --white: #fff;
+      --border: rgba(255,255,255,0.9);
+      --overlay: rgba(0,0,0,0.35);
+      --overlay-hover: rgba(0,0,0,0.5);
+      --text: #111;
+      --ease: cubic-bezier(0.4, 0, 0.2, 1);
+      --radius-pill: 999px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
+      font-family: 'Inter', -apple-system, sans-serif;
+    }
+
+    body { background: #0a0a0a; }
+
+    /* Mobile-only viewport */
+    .app {
+      max-width: 430px;
+      margin: 0 auto;
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .view {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.5s var(--ease), visibility 0.5s;
+    }
+    .view.active {
+      opacity: 1;
+      visibility: visible;
+      z-index: 1;
+    }
+
+    .view-bg {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+    .view-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.25) 100%);
+      pointer-events: none;
+    }
+
+    /* Home: store */
+    #view-home .view-bg {
+      background-image: url('../Images/store.jpg');
+      background-size: 225%;
+      background-position: center;
+    }
+
+    /* Rooms */
+    #view-hot .view-bg {
+      background-image: url('../Images/Blender.jpg');
+      background-size: cover;
+      background-position: 30% center;
+    }
+    #view-cold .view-bg {
+      background-image: url('../Images/underwater.jpg');
+      background-size: cover;
+      background-position: 100% center;
+    }
+    #view-floor .view-bg { background-image: url('../Images/Mobile.jpg'); }
+
+    /* Content wrapper */
+    .view-content {
+      position: relative;
+      z-index: 2;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 1.25rem 1rem 1.5rem;
+    }
+
+    /* Product dots container – over the background */
+    .dots-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+    }
+    .dots-layer > * { pointer-events: auto; }
+
+    /* Single product dot */
+    .dot-wrap {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .dot {
+      display: block;
+      width: 1rem;
+      height: 1rem;
+      position: relative;
+      transition: transform 0.25s var(--ease), filter 0.3s;
+    }
+    .dot svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .dot circle {
+      fill: #fff;
+    }
+    .dot-wrap:hover .dot,
+    .dot-wrap:focus .dot {
+      transform: scale(1.08);
+    }
+
+    /* Ripple animation on load (home: dots-layer) */
+    .dots-layer .dot::after {
+      content: '';
+      position: absolute;
+      inset: -28px;
+      border-radius: 50%;
+      border: 4px solid rgba(255,255,255,0.55);
+      animation: dot-ripple 1.2s var(--ease) forwards;
+      opacity: 0;
+    }
+    .dots-layer .dot-wrap:nth-child(1) .dot::after { animation-delay: 0.1s; }
+    .dots-layer .dot-wrap:nth-child(2) .dot::after { animation-delay: 0.25s; }
+    .dots-layer .dot-wrap:nth-child(3) .dot::after { animation-delay: 0.4s; }
+    .dots-layer .dot-wrap:nth-child(4) .dot::after { animation-delay: 0.55s; }
+    .dots-layer .dot-wrap:nth-child(5) .dot::after { animation-delay: 0.7s; }
+    .dots-layer .dot-wrap:nth-child(6) .dot::after { animation-delay: 0.85s; }
+    .dots-layer .dot-wrap:nth-child(7) .dot::after { animation-delay: 1s; }
+    .dots-layer .dot-wrap:nth-child(8) .dot::after { animation-delay: 1.15s; }
+    .dots-layer .dot-wrap:nth-child(9) .dot::after { animation-delay: 1.3s; }
+    .dots-layer .dot-wrap:nth-child(10) .dot::after { animation-delay: 1.45s; }
+
+    /* Room pages: ripple runs when view becomes active (triggered by JS so it restarts each visit) */
+    .room-dots .dot::after {
+      content: '';
+      position: absolute;
+      inset: -28px;
+      border-radius: 50%;
+      border: 4px solid rgba(255,255,255,0.65);
+      opacity: 0;
+      animation: none;
+    }
+    .room-dots .dot-wrap.dot-ripple-trigger .dot::after {
+      animation: dot-ripple 1.5s var(--ease) forwards;
+    }
+
+    @keyframes dot-ripple {
+      0% {
+        transform: scale(0.4);
+        opacity: 0.9;
+      }
+      100% {
+        transform: scale(2);
+        opacity: 0;
+      }
+    }
+
+    /* Tooltip (pic 2 style): pill with arrow */
+    .dot-tooltip {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%) translateY(-12px);
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s var(--ease), visibility 0.2s, transform 0.2s var(--ease);
+      pointer-events: none;
+    }
+    .dot-wrap:hover .dot-tooltip,
+    .dot-wrap:focus .dot-tooltip,
+    .dot-wrap.tooltip-visible .dot-tooltip {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(-10px);
+    }
+
+    .dot-tooltip-inner {
+      background: var(--white);
+      color: var(--text);
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 0.55rem 1rem;
+      border-radius: var(--radius-pill);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+      position: relative;
+    }
+    .dot-tooltip-inner::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 8px solid transparent;
+      border-top-color: var(--white);
+    }
+
+    /* Nav buttons (pic 3 / pic 4) – spread on home: left, right, bottom */
+    .nav-buttons {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      padding: 1rem;
+      padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0));
+    }
+    .nav-buttons .nav-btn {
+      position: absolute;
+      pointer-events: auto;
+      opacity: 0;
+      animation: btnReveal 0.6s var(--ease) forwards;
+    }
+    .nav-buttons .nav-btn[data-room="hot"] {
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    .nav-buttons .nav-btn[data-room="hot"]:hover,
+    .nav-buttons .nav-btn[data-room="hot"]:focus { transform: translateY(-50%) scale(1.02); }
+    .nav-buttons .nav-btn[data-room="cold"] {
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    .nav-buttons .nav-btn[data-room="cold"]:hover,
+    .nav-buttons .nav-btn[data-room="cold"]:focus { transform: translateY(-50%) scale(1.02); }
+    .nav-buttons .nav-btn[data-room="floor"] {
+      left: 50%;
+      bottom: 4rem;
+      transform: translateX(-50%);
+    }
+    .nav-buttons .nav-btn[data-room="floor"]:hover,
+    .nav-buttons .nav-btn[data-room="floor"]:focus { transform: translateX(-50%) scale(1.02); }
+    .nav-buttons .nav-btn:nth-child(1) { animation-delay: 0.4s; }
+    .nav-buttons .nav-btn:nth-child(2) { animation-delay: 0.55s; }
+    .nav-buttons .nav-btn:nth-child(3) { animation-delay: 0.7s; }
+    @keyframes btnReveal {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .nav-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.7rem 1rem;
+      background: var(--overlay);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      color: var(--white);
+      font-size: 0.85rem;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.3s var(--ease), border-color 0.3s, transform 0.2s var(--ease);
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nav-btn:hover,
+    .nav-btn:focus {
+      background: var(--overlay-hover);
+      border-color: var(--white);
+    }
+    .nav-btn svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    /* Back button on room pages */
+    .back-bar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      margin-bottom: auto;
+      padding-top: env(safe-area-inset-top, 0);
+    }
+    .back-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.8);
+      background: var(--overlay);
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.25s, transform 0.2s;
+      text-decoration: none;
+    }
+    .back-btn:hover,
+    .back-btn:focus {
+      background: var(--overlay-hover);
+      transform: scale(1.05);
+    }
+    .back-btn svg { width: 18px; height: 18px; }
+
+    /* Room page: one main product dot (same white dot + pill tooltip as home) */
+    .room-dots {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+    }
+    .room-dots .dot-wrap { pointer-events: auto; }
+    .room-dots .dot {
+      display: block;
+      width: 1rem;
+      height: 1rem;
+      position: relative;
+    }
+    .room-dots .dot svg { display: block; width: 100%; height: 100%; }
+    .room-dots .dot circle { fill: #fff; }
+    .room-dots .dot-wrap:hover .dot,
+    .room-dots .dot-wrap:focus .dot,
+    .room-dots .dot-wrap.tooltip-visible .dot {
+      transform: scale(1.08);
+    }
+
+    /* Fade-in for views */
+    .view.enter {
+      animation: viewEnter 0.5s var(--ease) forwards;
+    }
+    @keyframes viewEnter {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- HOME -->
+    <div id="view-home" class="view active">
+      <div class="view-bg"></div>
+      <div class="dots-layer" id="home-dots" aria-hidden="true"></div>
+      <div class="view-content">
+        <div class="nav-buttons">
+          <button type="button" class="nav-btn" data-room="hot" aria-label="Lets go hot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Lets go hot</button>
+          <button type="button" class="nav-btn" data-room="cold" aria-label="Lets go cold">Lets go cold <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+          <button type="button" class="nav-btn" data-room="floor" aria-label="Lets go on floor">Lets go on floor <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOT (Blender) -->
+    <div id="view-hot" class="view">
+      <div class="view-bg"></div>
+      <div class="room-dots" id="room-hot-dots"></div>
+      <div class="view-content">
+        <a href="#" class="back-btn" data-back aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></a>
+        <div class="nav-buttons"><!-- spacer --></div>
+      </div>
+    </div>
+
+    <!-- COLD (Underwater / Smartwatch) -->
+    <div id="view-cold" class="view">
+      <div class="view-bg"></div>
+      <div class="room-dots" id="room-cold-dots"></div>
+      <div class="view-content">
+        <a href="#" class="back-btn" data-back aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></a>
+        <div class="nav-buttons"><!-- spacer --></div>
+      </div>
+    </div>
+
+    <!-- FLOOR (Mobile) -->
+    <div id="view-floor" class="view">
+      <div class="view-bg"></div>
+      <div class="room-dots" id="room-floor-dots"></div>
+      <div class="view-content">
+        <a href="#" class="back-btn" data-back aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></a>
+        <div class="nav-buttons"><!-- spacer --></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var ROOM_LINKS = {
+        hot: 'https://www.itel-life.com/products/home-appliances/home-appliances/blender-m1',
+        cold: 'https://www.itel-life.com/products/smart-life/wear/smartwatch-1',
+        floor: 'https://www.itel-life.com/products/phone/s-series/s23'
+      };
+
+      // Home page: dots each link to a unique itel page (not the room product links), same hover as room pages
+      var HOME_DOTS = [
+        { x: 28, y: 40, label: 'Phones', href: 'https://www.itel-life.com/products/phone' },
+        { x: 72, y: 38, label: 'Power', href: 'https://www.itel-life.com/products/power' },
+        { x: 52, y: 58, label: 'Smart Wear', href: 'https://www.itel-life.com/products/smart-life/wear' },
+        { x: 48, y: 78, label: 'itel', href: 'https://www.itel-life.com/' }
+      ];
+
+      // Blender page: one dot on the blender (kettle)
+      var ROOM_DOTS_HOT = [
+        { x: 50, y: 50, label: 'Blender M1', href: 'https://www.itel-life.com/products/home-appliances/home-appliances/blender-m1' }
+      ];
+      // Underwater page: one dot on the watch — change x and y to position it (values are % from top-left: 0–100)
+      var ROOM_DOTS_COLD = [
+        { x: 65, y: 47, label: 'E1 Smart Watch', href: 'https://www.itel-life.com/products/smart-life/wear/smartwatch-1' }
+      ];
+      var ROOM_DOT_CONFIG = {
+        floor: { x: 50, y: 50, label: 'S23' }
+      };
+
+      function createDotEl(opt) {
+        var wrap = document.createElement('a');
+        wrap.className = 'dot-wrap';
+        wrap.setAttribute('href', opt.href || '#');
+        wrap.setAttribute('aria-label', opt.label || 'Product');
+        if (opt.external) wrap.setAttribute('target', '_blank');
+        wrap.style.left = opt.x + '%';
+        wrap.style.top = opt.y + '%';
+        wrap.innerHTML =
+          '<span class="dot" aria-hidden="true"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle r="50" cx="50" cy="50" fill="white"/></svg></span>' +
+          '<span class="dot-tooltip"><span class="dot-tooltip-inner">' + (opt.label || '') + '</span></span>';
+        return wrap;
+      }
+
+      function renderHomeDots(container) {
+        container.innerHTML = '';
+        HOME_DOTS.forEach(function (d) {
+          var el = createDotEl({
+            x: d.x,
+            y: d.y,
+            label: d.label,
+            href: d.href,
+            external: true
+          });
+          container.appendChild(el);
+        });
+      }
+
+      function renderRoomDots(container, roomKey) {
+        container.innerHTML = '';
+        if (roomKey === 'hot' && ROOM_DOTS_HOT.length) {
+          ROOM_DOTS_HOT.forEach(function (d) {
+            var el = createDotEl({
+              x: d.x,
+              y: d.y,
+              label: d.label,
+              href: d.href,
+              external: true
+            });
+            container.appendChild(el);
+          });
+          return;
+        }
+        if (roomKey === 'cold' && ROOM_DOTS_COLD.length) {
+          ROOM_DOTS_COLD.forEach(function (d) {
+            var el = createDotEl({
+              x: d.x,
+              y: d.y,
+              label: d.label,
+              href: d.href,
+              external: true
+            });
+            container.appendChild(el);
+          });
+          return;
+        }
+        var link = ROOM_LINKS[roomKey];
+        var cfg = ROOM_DOT_CONFIG[roomKey] || { x: 50, y: 45, label: 'View product' };
+        var el = createDotEl({
+          x: cfg.x,
+          y: cfg.y,
+          label: cfg.label,
+          href: link,
+          external: true
+        });
+        container.appendChild(el);
+      }
+
+      var tooltipTimeout = null;
+
+      function showView(id) {
+        if (tooltipTimeout) {
+          clearTimeout(tooltipTimeout);
+          tooltipTimeout = null;
+        }
+        document.querySelectorAll('.view').forEach(function (v) {
+          v.classList.remove('active', 'enter');
+          v.querySelectorAll('.room-dots .dot-wrap').forEach(function (wrap) {
+            wrap.classList.remove('dot-ripple-trigger', 'tooltip-visible');
+          });
+          v.querySelectorAll('.dots-layer .dot-wrap').forEach(function (wrap) {
+            wrap.classList.remove('tooltip-visible');
+          });
+        });
+        var view = document.getElementById(id);
+        if (view) {
+          view.classList.add('active', 'enter');
+          setTimeout(function () { view.classList.remove('enter'); }, 500);
+          var roomDots = view.querySelectorAll('.room-dots .dot-wrap');
+          roomDots.forEach(function (roomDot) {
+            roomDot.classList.remove('dot-ripple-trigger');
+            roomDot.offsetHeight;
+            roomDot.classList.add('dot-ripple-trigger');
+          });
+          if (id === 'view-home') {
+            var homeDots = view.querySelectorAll('.dots-layer .dot-wrap');
+            tooltipTimeout = setTimeout(function () {
+              homeDots.forEach(function (wrap) {
+                wrap.classList.add('tooltip-visible');
+              });
+              tooltipTimeout = null;
+            }, 2000);
+          } else {
+            var firstRoomDot = roomDots[0];
+            if (firstRoomDot) {
+              tooltipTimeout = setTimeout(function () {
+                firstRoomDot.classList.add('tooltip-visible');
+                tooltipTimeout = null;
+              }, 2000);
+            }
+          }
+        }
+      }
+
+      function init() {
+        var app = document.querySelector('.app');
+        renderHomeDots(document.getElementById('home-dots'));
+        renderRoomDots(document.getElementById('room-hot-dots'), 'hot');
+        renderRoomDots(document.getElementById('room-cold-dots'), 'cold');
+        renderRoomDots(document.getElementById('room-floor-dots'), 'floor');
+
+        // Run 2s tooltip timer whenever home is shown (including first load)
+        var homeView = document.getElementById('view-home');
+        if (homeView && homeView.classList.contains('active')) {
+          tooltipTimeout = setTimeout(function () {
+            homeView.querySelectorAll('.dots-layer .dot-wrap').forEach(function (wrap) {
+              wrap.classList.add('tooltip-visible');
+            });
+            tooltipTimeout = null;
+          }, 2000);
+        }
+
+        app.addEventListener('click', function (e) {
+          var btn = e.target.closest('.nav-btn[data-room]');
+          if (btn) {
+            e.preventDefault();
+            var room = btn.getAttribute('data-room');
+            showView('view-' + room);
+          }
+          var back = e.target.closest('[data-back]');
+          if (back) {
+            e.preventDefault();
+            showView('view-home');
+          }
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>
